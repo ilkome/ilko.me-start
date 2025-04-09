@@ -41,11 +41,11 @@ pnpm check
 
 ## Routing
 
-This project uses [TanStack Router](https://tanstack.com/router). The initial setup is a file based router. Which means that the routes are managed as files in `src/routes`.
+This project uses [TanStack Router](https://tanstack.com/router). The initial setup is a file based router. Which means that the routes are managed as files in `app/routes`.
 
 ### Adding A Route
 
-To add a new route to your application just add another a new file in the `./src/routes` directory.
+To add a new route to your application just add another a new file in the `./app/routes` directory.
 
 TanStack will automatically generate the content of the route file for you.
 
@@ -71,15 +71,13 @@ More information on the `Link` component can be found in the [Link documentation
 
 ### Using A Layout
 
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you use the `<Outlet />` component.
+In the File Based Routing setup the layout is located in `app/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you use the `<Outlet />` component.
 
 Here is an example layout that includes a header:
 
 ```tsx
-import { Outlet, createRootRoute } from '@tanstack/react-router'
+import { createRootRoute, Link, Outlet } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
-
-import { Link } from '@tanstack/react-router'
 
 export const Route = createRootRoute({
   component: () => (
@@ -109,8 +107,17 @@ For example:
 
 ```tsx
 const peopleRoute = createRoute({
+  component: () => {
+    const data = peopleRoute.useLoaderData()
+    return (
+      <ul>
+        {data.results.map(person => (
+          <li key={person.name}>{person.name}</li>
+        ))}
+      </ul>
+    )
+  },
   getParentRoute: () => rootRoute,
-  path: '/people',
   loader: async () => {
     const response = await fetch('https://swapi.dev/api/people')
     return response.json() as Promise<{
@@ -119,16 +126,7 @@ const peopleRoute = createRoute({
       }[]
     }>
   },
-  component: () => {
-    const data = peopleRoute.useLoaderData()
-    return (
-      <ul>
-        {data.results.map((person) => (
-          <li key={person.name}>{person.name}</li>
-        ))}
-      </ul>
-    )
-  },
+  path: '/people',
 })
 ```
 
@@ -191,18 +189,18 @@ import './App.css'
 
 function App() {
   const { data } = useQuery({
-    queryKey: ['people'],
+    initialData: [],
     queryFn: () =>
       fetch('https://swapi.dev/api/people')
-        .then((res) => res.json())
-        .then((data) => data.results as { name: string }[]),
-    initialData: [],
+        .then(res => res.json())
+        .then(data => data.results as { name: string }[]),
+    queryKey: ['people'],
   })
 
   return (
     <div>
       <ul>
-        {data.map((person) => (
+        {data.map(person => (
           <li key={person.name}>{person.name}</li>
         ))}
       </ul>
@@ -225,11 +223,12 @@ First you need to add TanStack Store as a dependency:
 pnpm install @tanstack/add
 ```
 
-Now let's create a simple counter in the `src/App.tsx` file as a demonstration.
+Now let's create a simple counter in the `app/App.tsx` file as a demonstration.
 
 ```tsx
 import { useStore } from '@tanstack/react-store'
 import { Store } from '@tanstack/store'
+
 import './App.css'
 
 const countStore = new Store(0)
@@ -238,8 +237,10 @@ function App() {
   const count = useStore(countStore)
   return (
     <div>
-      <button onClick={() => countStore.setState((n) => n + 1)}>
-        Increment - {count}
+      <button onClick={() => countStore.setState(n => n + 1)}>
+        Increment -
+        {' '}
+        {count}
       </button>
     </div>
   )
@@ -254,14 +255,15 @@ Let's check this out by doubling the count using derived state.
 
 ```tsx
 import { useStore } from '@tanstack/react-store'
-import { Store, Derived } from '@tanstack/store'
+import { Derived, Store } from '@tanstack/store'
+
 import './App.css'
 
 const countStore = new Store(0)
 
 const doubledStore = new Derived({
-  fn: () => countStore.state * 2,
   deps: [countStore],
+  fn: () => countStore.state * 2,
 })
 doubledStore.mount()
 
@@ -271,10 +273,15 @@ function App() {
 
   return (
     <div>
-      <button onClick={() => countStore.setState((n) => n + 1)}>
-        Increment - {count}
+      <button onClick={() => countStore.setState(n => n + 1)}>
+        Increment -
+        {' '}
+        {count}
       </button>
-      <div>Doubled - {doubledCount}</div>
+      <div>
+        Doubled -
+        {doubledCount}
+      </div>
     </div>
   )
 }
