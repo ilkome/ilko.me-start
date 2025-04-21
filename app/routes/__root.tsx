@@ -1,27 +1,58 @@
+import type { ThemeMode } from '@/features/theme/useTheme'
+import type { QueryClient } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
-import { createRootRoute, HeadContent, Outlet, Scripts } from '@tanstack/react-router'
+import { DefaultCatchBoundary } from '@/components/DefaultCatchBoundary'
+import { Button } from '@/components/ui/button'
+// import { authQueryOptions } from '@/features/user/queries'
+// import { getUser } from '@/features/user/utils'
+// import { Toaster } from '@/components/ui/sonner'
+import { ThemeToggle } from '@/features/theme/ThemeToggle'
+import { getClientTheme, getServerThemeCookie, setServerThemeCookie, updateClientTheme } from '@/features/theme/useTheme'
+import { getSupabaseServerClient } from '@/services/supabase/utils'
+import styles from '@/styles.css?url'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { createRootRouteWithContext, HeadContent, Link, Outlet, Scripts } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { createServerFn } from '@tanstack/react-start'
 import { useEffect, useState } from 'react'
 
-import type { ThemeMode } from '~/features/theme/useTheme'
+const fetchUser = createServerFn({ method: 'GET' }).handler(async () => {
+  const supabase = await getSupabaseServerClient()
+  const { data, error: _error } = await supabase.auth.getUser()
 
-import { ThemeToggle } from '~/features/theme/ThemeToggle'
-import { getPreferredTheme, getThemeCookie, updateTheme } from '~/features/theme/useTheme'
-import styles from '~/styles.css?url'
+  if (!data.user?.email)
+    return null
 
-export const Route = createRootRoute({
-  component: () => (
-    <>
+  return {
+    email: data.user.email,
+  }
+})
+
+export const Route = createRootRouteWithContext<{
+  queryClient: QueryClient
+}>()({
+  beforeLoad: async () => ({ user: await fetchUser() }),
+
+  component: () => {
+    return (
       <RootDocument>
         <Outlet />
-        <TanStackRouterDevtools />
       </RootDocument>
-    </>
-  ),
+    )
+  },
+
+  errorComponent: (props) => {
+    return (
+      <RootDocument>
+        <DefaultCatchBoundary {...props} />
+      </RootDocument>
+    )
+  },
 
   head: () => ({
     links: [{ href: styles, rel: 'stylesheet' }],
+
     meta: [{
       charSet: 'utf-8',
     }, {
@@ -32,19 +63,28 @@ export const Route = createRootRoute({
     }],
   }),
 
-  loader: async () => ({
-    themeCookie: await getThemeCookie() as ThemeMode,
+  loader: async ({ context }) => ({
+    themeCookie: await getServerThemeCookie() as ThemeMode,
+    user: context.user,
   }),
 })
 
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
+  const { user } = Route.useRouteContext()
   const { themeCookie } = Route.useLoaderData()
-  const [theme, setTheme] = useState<ThemeMode>(themeCookie)
+  const [theme, setThemeState] = useState<ThemeMode>(themeCookie ?? 'dark')
 
   useEffect(() => {
-    const newTheme = themeCookie || getPreferredTheme()
-    setTheme(newTheme)
-    updateTheme(newTheme)
+    if (themeCookie)
+      return
+
+    const preferredTheme = getClientTheme()
+    if (themeCookie !== preferredTheme) {
+      const newTheme = themeCookie || preferredTheme
+      setThemeState(newTheme)
+      updateClientTheme(newTheme)
+      setServerThemeCookie({ data: newTheme })
+    }
   }, [])
 
   return (
@@ -53,12 +93,31 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
         <HeadContent />
       </head>
 
+      {/* <pre>{JSON.stringify(user, null, 2)}</pre> */}
       <body className="bg-[var(--ui-primary)]">
-        <h1 className="p-10 bg-red-300">hello ilkome</h1>
+        <ThemeToggle theme={theme} setTheme={setThemeState} />
         {children}
-        <Scripts />
 
-        <ThemeToggle initialTheme={theme} />
+        <Button onClick={() => console.log('Button clicked!')}>Test</Button>
+        <Link to="/login">Login</Link>
+
+        <div>
+          {user
+            ? (
+                <>
+                  <span className="mr-2">
+                    {user.email}
+                  </span>
+                  <Link to="/logout">Logout</Link>
+                </>
+              )
+            : 'Hello'}
+        </div>
+
+        <TanStackRouterDevtools position="bottom-right" />
+        <ReactQueryDevtools buttonPosition="bottom-left" />
+        <Scripts />
+        {/* <Toaster /> */}
       </body>
     </html>
   )

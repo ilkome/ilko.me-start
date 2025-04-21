@@ -1,3 +1,4 @@
+import { useDebouncer } from '@tanstack/react-pacer'
 import { createServerFn } from '@tanstack/react-start'
 import process from 'node:process'
 import { getCookie, setCookie } from 'vinxi/http'
@@ -6,10 +7,10 @@ import { z } from 'zod'
 export const themeSchema = z.enum(['light', 'dark'])
 export type ThemeMode = z.infer<typeof themeSchema>
 
-export const setThemeCookie = createServerFn({ method: 'POST' })
+export const setServerThemeCookie = createServerFn({ method: 'POST' })
   .validator(themeSchema)
-  .handler((ctx) => {
-    setCookie('theme', ctx.data, {
+  .handler(({ data }) => {
+    setCookie('theme', data, {
       httpOnly: false,
       maxAge: 60 * 60 * 24 * 365 * 10, // 10 years
       path: '/',
@@ -18,10 +19,16 @@ export const setThemeCookie = createServerFn({ method: 'POST' })
     })
   })
 
-export const getThemeCookie = createServerFn()
-  .handler(() => getCookie('theme') as ThemeMode)
+// export const serverThemeDebouncer = useDebouncer(
+//   (theme: ThemeMode) => console.log(11, theme),
+//   { wait: 1000 },
+// )
 
-export function getPreferredTheme(): ThemeMode {
+export const getServerThemeCookie = createServerFn().handler(
+  () => getCookie('theme') as ThemeMode,
+)
+
+export function getClientTheme(): ThemeMode {
   const stored = localStorage.getItem('theme')
   if (stored)
     return stored as ThemeMode
@@ -30,17 +37,9 @@ export function getPreferredTheme(): ThemeMode {
   return media.matches ? 'dark' : 'light'
 }
 
-export function updateDocumentTheme(theme: ThemeMode) {
-  const de = document.documentElement
-
-  if (theme === 'dark')
-    de.classList.add(theme)
-  else
-    de.classList.remove('dark')
-}
-
-export function updateTheme(theme: ThemeMode) {
-  setThemeCookie({ data: theme })
-  updateDocumentTheme(theme)
+export function updateClientTheme(theme: ThemeMode): void {
   localStorage.setItem('theme', theme)
+
+  const de = document.documentElement
+  theme === 'dark' ? de.classList.add(theme) : de.classList.remove('dark')
 }
