@@ -6,6 +6,7 @@ import { getSupabaseServerClient } from '@/services/supabase/utils'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, redirect, useRouter } from '@tanstack/react-router'
 import { createServerFn, useServerFn } from '@tanstack/react-start'
+import { toast } from 'sonner'
 
 const loginFn = createServerFn({ method: 'POST' })
   .validator((data: { email: string, password: string }) => data)
@@ -17,12 +18,14 @@ const loginFn = createServerFn({ method: 'POST' })
     })
 
     if (error) {
+      toast('Login failed:')
       return {
         error: true,
         message: error.message,
       }
     }
 
+    // toast('Login success 2')
     throw redirect({
       href: '/',
     })
@@ -50,6 +53,7 @@ function LoginComp() {
       await queryClient.invalidateQueries(authQueryOptions())
       router.invalidate()
       console.log('login success')
+      toast('Login success 1')
     },
   })
 

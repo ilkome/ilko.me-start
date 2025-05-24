@@ -13,8 +13,6 @@ const logoutFn = createServerFn().handler(async () => {
     }
   }
 
-  // toast('Event has been created.')
-
   throw redirect({
     href: '/',
   })

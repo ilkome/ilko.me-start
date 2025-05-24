@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 
 import { DefaultCatchBoundary } from '@/components/DefaultCatchBoundary'
 import { Button } from '@/components/ui/button'
+import { Toaster } from '@/components/ui/sonner'
 // import { authQueryOptions } from '@/features/user/queries'
 // import { getUser } from '@/features/user/utils'
 // import { Toaster } from '@/components/ui/sonner'
@@ -98,7 +99,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
         <ThemeToggle theme={theme} setTheme={setThemeState} />
         {children}
 
-        <Button onClick={() => console.log('Button clicked!')}>Test</Button>
+        <Button>Test</Button>
         <Link to="/login">Login</Link>
 
         <div>
@@ -117,7 +118,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
         <TanStackRouterDevtools position="bottom-right" />
         <ReactQueryDevtools buttonPosition="bottom-left" />
         <Scripts />
-        {/* <Toaster /> */}
+        <Toaster />
       </body>
     </html>
   )
